@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -15,8 +16,14 @@ void http_serve_request(struct netconn *newconn) {
     struct netbuf *buf;
     err_t err;
     
+    struct netbuf *returnbuf = netbuf_new();
+    char *data = netbuf_alloc(returnbuf, 12);
+    
+    strlcpy("Hello world!", data, 12);
+    
     while((err = netconn_recv(newconn, &buf)) == ERR_OK) {
-        printf("%s\n", (char *) buf->ptr->payload);
+        printf("Request received!\n");
+        netconn_send(newconn, returnbuf);
     }
     
     netconn_close(newconn);
