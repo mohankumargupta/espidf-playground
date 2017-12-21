@@ -6,6 +6,7 @@
 #include "esp_event_loop.h"
 #include "nvs_flash.h"
 #include "wifi_ap.h"
+#include "http_server.h"
 
 
 void app_main()
@@ -19,5 +20,6 @@ void app_main()
     ESP_ERROR_CHECK( ret );
 
     wifi_ap();
+    xTaskCreate(&http_server, "http_server", 8192, NULL, 5, NULL);
 }
 
