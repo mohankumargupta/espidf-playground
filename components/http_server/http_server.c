@@ -17,12 +17,9 @@ void http_serve_request(struct netconn *newconn) {
     char html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n<!doctype html><html><body><div><a href=\"/boo\">Response 1</a></div><div><a></a></div></body></html>\n\n";
     char firstpage_html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n<html><body><div><h1>Page 1</h1><div><a href=\"/\">Back</a></div></body></html>\n\n";
     char errorpage_404[] = "HTTP/1.0 404 Not Found\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n";
-    char *returnhtml = 0;
     struct netbuf *incoming_netbuf;
     char *data;
     uint16_t data_length;
-
-
 
     err_t err = netconn_recv(newconn, &incoming_netbuf);
     if (incoming_netbuf != NULL && err==ERR_OK) {
@@ -68,7 +65,7 @@ void http_serve_request(struct netconn *newconn) {
 
     netconn_close(newconn);
     netbuf_delete(incoming_netbuf);
-    free(returnhtml);
+
 }
 
 void http_server(void *pvParameters) {
