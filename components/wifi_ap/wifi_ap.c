@@ -22,8 +22,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-/* Initialize Wi-Fi as sta and set scan method */
-static void wifi_ap(void)
+void wifi_ap(void)
 {
    tcpip_adapter_init();
    ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP));
