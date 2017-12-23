@@ -9,9 +9,12 @@
 #include "lwip/arch.h"
 #include "lwip/err.h"
 #include "nvs_flash.h"
+#include "crypto/base64.h"
+#include "hwcrypto/sha.h"
 
 
 #define HTTP_PORT 80
+#define SHA1_160 20
 
 void http_serve_request(struct netconn *newconn) {
     char html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n<!doctype html><html><body><div><a href=\"/boo\">Response 1</a></div><div><a></a></div></body></html>\n\n";
@@ -58,8 +61,24 @@ void http_serve_request(struct netconn *newconn) {
     			  netconn_write(newconn, errorpage_404, sizeof(errorpage_404), NETCONN_COPY);
     		  }
 
+    		  //unsigned int s;
+    		  const char *input_key = "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+    		  uint8_t sha_result[SHA1_160];
+    		  esp_sha(SHA1, (unsigned char *) input_key, strlen(input_key),  sha_result);
+    		  //unsigned char *raw = (unsigned char *) input;
+    		  //unsigned char *encoded =  base64_encode(raw, strlen(input), (size_t *) &s);
+
+
+
     		  printf("Request received:\n%s\n", path);
     		  printf("Path length:%d\n", path_length);
+    		  printf("SHA1:");
+    		  for (int i=0;i<SHA1_160; i++) {
+    			  printf("%x ", sha_result[i]);
+    		  }
+    		  printf("\n");
+    		  //printf("Base64 encode of abc - size:%d answer:%s ", s, encoded);
     	  }
     }
 
