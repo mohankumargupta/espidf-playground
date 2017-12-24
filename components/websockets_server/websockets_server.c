@@ -23,13 +23,13 @@ void websockets_handshake(struct netconn *newconn) {
     char *data;
     uint16_t data_length;
 
-    const char WEBSOCKET_HEADER[] = "Upgrade: websocket\r\n";
+
     const char WEBSOCKET_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     const char WEBSOCKET_KEY[] = "Sec-WebSocket-Key: ";
-    const char WEBSOCKET_RSP[] = "HTTP/1.1 101 Switching Protocols\r\n" \
-                          "Upgrade: websocket\r\n" \
-                          "Connection: Upgrade\r\n" \
-                          "Sec-WebSocket-Accept: %s\r\n\r\n";
+    const char WEBSOCKET_RSP[] = "HTTP/1.1 101 Web Socket Protocol Handshake\n" \
+                          "Upgrade: websocket\n" \
+                          "Connection: Upgrade\n" \
+                          "Sec-WebSocket-Accept: %s\n\n";
 
 
 
@@ -62,9 +62,14 @@ void websockets_handshake(struct netconn *newconn) {
 
         	  //Then base64
         	  uint32_t s;
-    		  unsigned char *encoded =  base64_encode(sha_result, sizeof(sha_result),  &s);
-    		  printf("Base64:%s\n", encoded);
+    		  unsigned char *encoded_key =  base64_encode(sha_result, sizeof(sha_result),  &s);
+    		  printf("Base64:%s\n", encoded_key);
 
+    		  //Return the websockets handshake response
+    		  char buf[256];
+    		  snprintf(buf, sizeof(buf), WEBSOCKET_RSP, encoded_key);
+    		  printf("Websocket handshake response:%s\n", buf);
+    		  netconn_write(newconn, buf, strlen(buf), NETCONN_COPY);
     	  }
     }
 
