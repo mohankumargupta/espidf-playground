@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Websockets Example</title>
+<script type="text/javascript">
+      var msg = {
+        payload: "hello world!",
+        boo: "moo"
+      }
+      //alert('Hi');
+      var ws = new WebSocket('ws://10.10.20.1:8080/');
+      ws.addEventListener('open',function(ev) {
+        ws.send(JSON.stringify(msg));  
+        ws.close();
+      });
+      
+    
+</script>
+</head>
+<body>
+
+</body>
+</html>
