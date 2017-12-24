@@ -7,7 +7,7 @@
 #include "nvs_flash.h"
 #include "wifi_ap.h"
 #include "http_server.h"
-
+#include "websockets_server.h"
 
 void app_main()
 {
@@ -21,5 +21,6 @@ void app_main()
 
     wifi_ap();
     xTaskCreate(&http_server, "http_server", 8192, NULL, 5, NULL);
-}
+    xTaskCreate(&websockets_server, "websockets_server", 8192, NULL, 4, NULL);
 
+}
