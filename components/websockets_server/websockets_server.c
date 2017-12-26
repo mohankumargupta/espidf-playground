@@ -101,6 +101,18 @@ void websockets_handshake(struct netconn *newconn) {
     			  if (err == ERR_OK) {
     				  printf("received something from websockets\n");
     				  err = netbuf_data(incoming_netbuf, (void **) &data, &data_length );
+
+    				  if (err != ERR_OK) {
+    					  printf("Websockets not happy Jan!");
+    				  }
+
+    				  /*
+    				  if (data_length == 32) {
+    					  printf("Something went wrong:%s\n", data);
+    					  continue;
+    				  }
+                  */
+
     				  char masking_key[4];
 
     				  printf("data_length:%d", data_length);
@@ -137,8 +149,30 @@ void websockets_handshake(struct netconn *newconn) {
     				  printf("\n");
 
 
+    				  cJSON * root = cJSON_Parse(decoded);
+
+    				  cJSON *datapoints = cJSON_GetObjectItemCaseSensitive(root, "datapoints");
+    				  if (cJSON_IsNumber(datapoints)) {
+    					  printf("datapoints:%d\n",  datapoints->valueint);
+    				  }
+
+    				  cJSON *offset = cJSON_GetObjectItemCaseSensitive(root, "offset");
+    				  if (cJSON_IsNumber(offset)) {
+    					  printf("offset:%d\n",  offset->valueint);
+    				  }
+
+    				  cJSON *plot_type = cJSON_GetObjectItemCaseSensitive(root, "type");
+    				  printf("plot_type:%s\n",  plot_type->valuestring);
 
 
+
+    				  uint8_t send_data[5];
+    				  send_data[0] = 0x81;
+    				  send_data[1] = 3;
+    				  send_data[2] = 'w';
+    				  send_data[3] = 0x01;
+    				  send_data[4] = 0x00;
+    				  //netconn_write(newconn, send_data, sizeof(send_data), NETCONN_COPY);
 
     			  }
 
