@@ -103,6 +103,8 @@ void websockets_handshake(struct netconn *newconn) {
     				  err = netbuf_data(incoming_netbuf, (void **) &data, &data_length );
     				  char masking_key[4];
 
+    				  printf("data_length:%d", data_length);
+
     				  strncpy(masking_key, data + 2, 4);
     				  //masking_key[4] = '\0';
     				  /*
@@ -117,7 +119,7 @@ void websockets_handshake(struct netconn *newconn) {
                    //printf("encoded:%s\n",encoded);
 
 
-    				  int payload_length = data[1] & 0x0F;
+    				  int payload_length = data[1] & 0x7F;
     				  printf("payload_length:%d\n", payload_length);
 
     				  char decoded[payload_length + 1];
