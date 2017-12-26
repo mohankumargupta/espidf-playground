@@ -7,17 +7,26 @@
         payload: "hello world!",
         boo: "moo"
       }
-      //alert('Hi');
-      var ws = new WebSocket('ws://10.10.20.1:8080/');
-      ws.addEventListener('open',function(ev) {
-        ws.send(JSON.stringify(msg));  
-        ws.close();
+
+      var ws = new WebSocket('ws://10.10.20.1:8080');
+
+      document.addEventListener("DOMContentLoaded", function(){
+
+      document.querySelector("#boo").addEventListener('click', function() {
+     
+      		ws.send(JSON.stringify(msg));
+
+
       });
+         
+      });
+      //alert('Hi');
+
       
     
 </script>
 </head>
 <body>
-
+  <button id="boo">click</button>
 </body>
 </html>
