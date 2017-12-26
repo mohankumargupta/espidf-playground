@@ -98,7 +98,48 @@ void websockets_handshake(struct netconn *newconn) {
     		  printf("hopefully, receive websocket frames\n");
     		  while (true) {
     			  err_t err = netconn_recv(newconn, &incoming_netbuf) ;
-    		    printf("received something from websockets\n");
+    			  if (err == ERR_OK) {
+    				  printf("received something from websockets\n");
+    				  err = netbuf_data(incoming_netbuf, (void **) &data, &data_length );
+    				  char masking_key[4];
+
+    				  strncpy(masking_key, data + 2, 4);
+    				  //masking_key[4] = '\0';
+    				  /*
+    				  for(int i=0; i< 5; i++) {
+    					  printf("%02x ", masking_key[i]);
+    				  }
+    				  */
+
+
+                   //char encoded[data_length-6];
+                   //strncpy(encoded, data + 6, data_length - 6);
+                   //printf("encoded:%s\n",encoded);
+
+
+    				  int payload_length = data[1] & 0x0F;
+    				  printf("payload_length:%d\n", payload_length);
+
+    				  char decoded[payload_length + 1];
+    				  decoded[payload_length] = '\0';
+
+
+
+    				  for(int i=6; i< 6 + payload_length; i++) {
+    					  char decoded_char = (data[i]) ^ (masking_key[(i-6)%4]);
+    				      decoded[i-6] = decoded_char;
+    				  }
+
+                   printf("decoded:%s\n", decoded);
+
+    				  printf("\n");
+
+
+
+
+
+    			  }
+
     		  }
     	  }
     }
