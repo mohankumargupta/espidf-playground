@@ -4,11 +4,17 @@
     <title>Websockets Example</title>
 <script type="text/javascript">
       var msg = {
-        payload: "hello world!",
-        boo: "moo"
+        datapoints: 10,
+        type: 'scatter',
+        offset: 100
       }
 
-      var ws = new WebSocket('ws://10.10.20.1:8080');
+
+      var ws = new WebSocket('ws://192.168.4.1:8080');
+
+      ws.onmessage = function(evt) {
+        console.log(JSON.parse(evt.data));
+      }
 
       document.addEventListener("DOMContentLoaded", function(){
 
