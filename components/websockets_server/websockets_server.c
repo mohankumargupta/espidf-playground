@@ -21,7 +21,25 @@
 // Masking key is 4 bytes long
 #define WEBSOCKETS_HEADER_MASKING_KEY 4
 
-void websockets_serve_frames(struct netconn *newconn, char * data, uint16_t data_length) {
+#define TRUE 1
+#define FALSE 0
+
+int websockets_serve_frames(struct netconn *newconn, char * data, uint16_t data_length) {
+
+	if (data_length == 0) {
+		return FALSE;
+	}
+
+	if (data_length > 0)
+	{
+		printf("websocket frame first byte: %02x\n", data[0]);
+		printf("websocket frame second byte: %02x\n", data[1]);
+		if (data[0] != 0x81) {
+			return FALSE;
+		}
+
+	}
+
 	// Masking key starts at the 3rd byte of the frame (data+2) if MASK (bit 8)  is 1
 	char masking_key[WEBSOCKETS_HEADER_MASKING_KEY];
 	strncpy(masking_key, data + 2, WEBSOCKETS_HEADER_MASKING_KEY);
@@ -46,32 +64,65 @@ void websockets_serve_frames(struct netconn *newconn, char * data, uint16_t data
 	printf("decoded:%s\n", decoded);
 	printf("\n");
 
+
 	/*
-	 cJSON * root = cJSON_Parse(decoded);
+	 *  the incoming json has this form
+	 *  {
+	 *   "datapoints": 10,
+	 *   "type": "scatter",
+	 *   "offset": 100
+	 *  }
+	 *
+	 */
+	 cJSON *root = cJSON_Parse(decoded);
 
 	 cJSON *datapoints = cJSON_GetObjectItemCaseSensitive(root, "datapoints");
 	 if (cJSON_IsNumber(datapoints)) {
-	 printf("datapoints:%d\n",  datapoints->valueint);
+		 printf("datapoints:%d\n",  datapoints->valueint);
 	 }
 
 	 cJSON *offset = cJSON_GetObjectItemCaseSensitive(root, "offset");
 	 if (cJSON_IsNumber(offset)) {
-	 printf("offset:%d\n",  offset->valueint);
+		 printf("offset:%d\n",  offset->valueint);
 	 }
 
 	 cJSON *plot_type = cJSON_GetObjectItemCaseSensitive(root, "type");
 	 printf("plot_type:%s\n",  plot_type->valuestring);
 
-	 */
 
-	char header[] = { 0x81, 0x5, 'w', 'e', 'e', 'd', 's' };
+	 int number_of_datapoints = datapoints->valueint;
+	 int x_axis[number_of_datapoints];
+	 for (int i=1; i <= number_of_datapoints; i++) {
+		 x_axis[i - 1] = i;
+	 }
+	 int y_axis[number_of_datapoints];
+	 for (int i=0; i < number_of_datapoints; i++ ) {
+		 y_axis[i] = 110 + i;
+	 }
+
+	 cJSON *x = cJSON_CreateIntArray(x_axis, number_of_datapoints);
+	 cJSON *y = cJSON_CreateIntArray(y_axis, number_of_datapoints);
+
+	 cJSON_AddItemToObject(root, "x" , x);
+	 //cJSON_AddItemToObject(root, "y" , y);
+
+	 //printf("%s\n", cJSON_Print(root));
+     char *json = cJSON_Print(root);
+     //printf("JSON:%s\n JSON Length:%d\n", json, strlen(json));
+
+	char header[2];
+	header[0] = 0x81;
+	header[1] = strlen(json);
 
 	vTaskDelay(1500 / portTICK_PERIOD_MS);
 	err_t result = netconn_write(newconn, header, sizeof(header), NETCONN_COPY);
+	result = netconn_write(newconn, json, strlen(json), NETCONN_COPY);
 	if (result != ERR_OK) {
 		printf("whoopsys\n");
-		return;
+		return FALSE;
 	}
+
+	return TRUE;
 }
 
 void websockets_handshake(struct netconn *newconn) {
@@ -124,12 +175,13 @@ void websockets_handshake(struct netconn *newconn) {
 	//Return the websockets handshake response
 	char buf[256];
 	sprintf(buf, WEBSOCKET_RSP, s - 1, encoded_key);
-	printf("Websocket handshake response:%s\n", buf);
+	printf("Websocket handshake response:\n%s\n", buf);
 	vTaskDelay(1500 / portTICK_PERIOD_MS);
 	netconn_write(newconn, buf, strlen(buf), NETCONN_COPY);
 
 	// Now ready to accept websocket traffic from client
 	while (true) {
+		printf("Entering netconn_recv...\n");
 		// blocking until get some websocket traffic from client
 		err_t err = netconn_recv(newconn, &incoming_netbuf);
 		if (err != ERR_OK) {
@@ -152,13 +204,16 @@ void websockets_handshake(struct netconn *newconn) {
 			continue;
 		}
 
-		websockets_serve_frames(newconn, data, data_length);
+		if (websockets_serve_frames(newconn, data, data_length) == FALSE) {
+			//netbuf_delete(incoming_netbuf);
+			netconn_close(newconn);
+			break;
+		}
 
 	}
 
 	netconn_close(newconn);
 	netbuf_delete(incoming_netbuf);
-	printf("exiting...\n");
 }
 
 void websockets_callback(struct netconn *conn, enum netconn_evt event, uint16_t len) {
