@@ -11,6 +11,8 @@
 #include "nvs_flash.h"
 #include "crypto/base64.h"
 #include "hwcrypto/sha.h"
+#include "cJSON.h"
+#include "servefrom_sdcard.h"
 
 
 #define HTTP_PORT 80
@@ -57,6 +59,12 @@ void http_serve_request(struct netconn *newconn) {
     			  netconn_write(newconn, firstpage_html, sizeof(firstpage_html), NETCONN_COPY);
     		  }
 
+    		  else if (strcmp(path, "/foo.txt") == 0) {
+                  //sdcard_init();
+                  //serve_file_from_sdcard("/foo.txt");
+                  //sdcard_cleanup();
+    		  }
+
     		  else {
     			  netconn_write(newconn, errorpage_404, sizeof(errorpage_404), NETCONN_COPY);
     		  }
@@ -71,13 +79,13 @@ void http_serve_request(struct netconn *newconn) {
 
 
 
-    		  printf("Request received:\n%s\n", path);
-    		  printf("Path length:%d\n", path_length);
-    		  printf("SHA1:");
+    		  //printf("Request received:\n%s\n", path);
+    		  //printf("Path length:%d\n", path_length);
+    		  //printf("SHA1:");
     		  for (int i=0;i<SHA1_160; i++) {
-    			  printf("%x ", sha_result[i]);
+    			  //printf("%x ", sha_result[i]);
     		  }
-    		  printf("\n");
+    		  //printf("\n");
     		  //printf("Base64 encode of abc - size:%d answer:%s ", s, encoded);
     	  }
     }
@@ -89,6 +97,11 @@ void http_serve_request(struct netconn *newconn) {
 
 void http_server(void *pvParameters) {
     struct netconn *conn, *newconn;
+
+    sdcard_init();
+    char *filecontents;
+    filecontents = serve_file_from_sdcard("/boo.txt");
+    printf("Contents of file %s:%s\n", "/boo.txt",filecontents);
 
     printf("Starting web server...");
     conn = netconn_new(NETCONN_TCP);

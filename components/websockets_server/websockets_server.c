@@ -14,6 +14,9 @@
 #include "cJSON.h"
 #include "mbedtls/sha1.h"
 
+// #define LWIP_SO_RCVTIMEO 1
+// #define WEBSOCKET_TCP_TIMEOUT 30000
+
 // websockets port
 #define WEBSOCKETS_PORT 8080
 // SHA1 is 20 bytes or 160-bit
@@ -117,6 +120,10 @@ int websockets_serve_frames(struct netconn *newconn, char * data, uint16_t data_
 	vTaskDelay(1500 / portTICK_PERIOD_MS);
 	err_t result = netconn_write(newconn, header, sizeof(header), NETCONN_COPY);
 	result = netconn_write(newconn, json, strlen(json), NETCONN_COPY);
+
+	free(json);
+	cJSON_Delete(root);
+
 	if (result != ERR_OK) {
 		printf("whoopsys\n");
 		return FALSE;
@@ -128,13 +135,15 @@ int websockets_serve_frames(struct netconn *newconn, char * data, uint16_t data_
 void websockets_handshake(struct netconn *newconn) {
 	struct netbuf *incoming_netbuf;
 	char *data;
-	uint16_t data_length;
+	uint16_t data_length = 0;
 
 	const char WEBSOCKET_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 	const char WEBSOCKET_KEY[] = "Sec-WebSocket-Key: ";
 	const char WEBSOCKET_RSP[] =
 			"HTTP/1.1 101 Switching Protocols \r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %.*s\r\n\r\n";
 
+	printf("Entering websocket handshake...\n");
+	printf("Heap size: %d\n", xPortGetFreeHeapSize());
 	err_t err = netconn_recv(newconn, &incoming_netbuf);
 	if (err != ERR_OK || incoming_netbuf == NULL) {
 		return;
@@ -178,10 +187,12 @@ void websockets_handshake(struct netconn *newconn) {
 	printf("Websocket handshake response:\n%s\n", buf);
 	vTaskDelay(1500 / portTICK_PERIOD_MS);
 	netconn_write(newconn, buf, strlen(buf), NETCONN_COPY);
+    netbuf_delete(incoming_netbuf);
 
 	// Now ready to accept websocket traffic from client
 	while (true) {
 		printf("Entering netconn_recv...\n");
+		printf("Heap size: %d\n", xPortGetFreeHeapSize());
 		// blocking until get some websocket traffic from client
 		err_t err = netconn_recv(newconn, &incoming_netbuf);
 		if (err != ERR_OK) {
@@ -191,6 +202,7 @@ void websockets_handshake(struct netconn *newconn) {
 		err = netbuf_data(incoming_netbuf, (void **) &data, &data_length);
 
 		if (err != ERR_OK) {
+			printf("Oh oh\n");
 			continue;
 		}
 
@@ -205,8 +217,11 @@ void websockets_handshake(struct netconn *newconn) {
 		}
 
 		if (websockets_serve_frames(newconn, data, data_length) == FALSE) {
-			//netbuf_delete(incoming_netbuf);
 			netconn_close(newconn);
+			netconn_delete(newconn);
+			netbuf_delete(incoming_netbuf);
+			//free(incoming_netbuf);
+			incoming_netbuf = NULL;
 			break;
 		}
 
@@ -236,6 +251,48 @@ void websockets_callback(struct netconn *conn, enum netconn_evt event, uint16_t 
 	}
 }
 
+void websockets_handle_request(struct netconn *newconn) {
+
+	struct netbuf *incoming_netbuf;
+	char *data;
+	uint16_t data_length;
+	const char WEBSOCKET_HANDSHAKE_UPGRADE[] = "Upgrade: websockets";
+    char *handshake;
+
+	err_t err = netconn_recv(newconn, &incoming_netbuf);
+	if (err != ERR_OK || incoming_netbuf == NULL) {
+			return;
+		}
+	err = netbuf_data(incoming_netbuf, (void **) &data, &data_length);
+	if (err != ERR_OK) {
+		return;
+	}
+
+	handshake = strstr(data, WEBSOCKET_HANDSHAKE_UPGRADE);
+
+	if (handshake != NULL) {
+		printf("Websocket handshake");
+		return;
+	}
+
+	if (data_length > 0)
+	{
+		printf("websocket frame first byte: %02x\n", data[0]);
+		printf("websocket frame second byte: %02x\n", data[1]);
+		if (data[0] != 0x81) {
+			return;
+		}
+		else {
+			// Must be a websocket frame
+			printf("Incoming websocket frame\n");
+		}
+
+	}
+
+
+
+}
+
 void websockets_server(void *pvParameters) {
 	struct netconn *conn, *newconn;
 
@@ -248,6 +305,7 @@ void websockets_server(void *pvParameters) {
 		printf("Accepting new websocket connection...\n");
 		websockets_handshake(newconn);
 		printf("Leaving websocket connnection...\n");
+		vTaskDelay(1);
 	}
 
 	netconn_close(conn);
