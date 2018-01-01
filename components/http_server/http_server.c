@@ -18,10 +18,33 @@
 #define HTTP_PORT 80
 #define SHA1_160 20
 
+char* get_mimetype(char *path) {
+	char *file_extension = strchr(path, '.');
+    if (file_extension != NULL) {
+    	if (strcmp(file_extension,".txt") == 0) {
+    		return "text/plain";
+    	}
+    	else if (strcmp(file_extension,".css") == 0) {
+    		return "text/css";
+    	}
+    	else if (strcmp(file_extension,".js") == 0) {
+    		return "text/javascript";
+    	}
+    	else if (strcmp(file_extension,".png") == 0) {
+    		return "image/png";
+    	}
+    }
+
+    return NULL;
+
+}
+
 void http_serve_request(struct netconn *newconn) {
     char html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n<!doctype html><html><body><div><a href=\"/boo\">Response 1</a></div><div><a></a></div></body></html>\n\n";
     char firstpage_html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n<html><body><div><h1>Page 1</h1><div><a href=\"/\">Back</a></div></body></html>\n\n";
     char errorpage_404[] = "HTTP/1.0 404 Not Found\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n";
+    char known_mimetype_html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: %s\n\n%s\n\n";
+
     struct netbuf *incoming_netbuf;
     char *data;
     uint16_t data_length;
@@ -59,21 +82,52 @@ void http_serve_request(struct netconn *newconn) {
     			  netconn_write(newconn, firstpage_html, sizeof(firstpage_html), NETCONN_COPY);
     		  }
 
-    		  else if (strcmp(path, "/foo.txt") == 0) {
-                  //sdcard_init();
-                  //serve_file_from_sdcard("/foo.txt");
-                  //sdcard_cleanup();
-    		  }
-
+    		  //else if (strcmp(path, "/boo.txt") == 0) {
     		  else {
-    			  netconn_write(newconn, errorpage_404, sizeof(errorpage_404), NETCONN_COPY);
-    		  }
+    			    char *filecontents;
+    			    //unsigned int file_length;
+    			    filecontents = serve_file_from_sdcard(path);
+    			    //printf("File Length:%u\n", file_length);
+    			    if (filecontents == NULL) {
+    			    	netconn_write(newconn, errorpage_404, sizeof(errorpage_404), NETCONN_COPY);
+    			    }
+    			    else {
+    			    	printf("Contents of file %s:%s\n", path, filecontents);
+    			    	//netconn_write(newconn, errorpage_404, sizeof(errorpage_404), NETCONN_COPY);
+    			    	//char returnhtml[13];
+
+    			    	char mime[] = "text/plain";
+    			    	size_t needed = snprintf(NULL, 0, known_mimetype_html, mime, filecontents);
+    			    	printf("size:%u\n", needed);
+    			    	char *returnhtml = (char *) malloc(needed * sizeof(char) + 1);
+
+    			    	//char *returnhtml;
+
+    			    	sprintf(returnhtml, known_mimetype_html, mime, filecontents);
+    			    	netconn_write(newconn, returnhtml, strlen(returnhtml), NETCONN_COPY);
+                        printf("Does it crash here?");
+
+
+                        //char *mime = get_mimetype(path);
+    			    	//char *mime = "text/plain";
+
+
+    			    	//printf("Does it get here before crash?");
+    			    	//sprintf(returnhtml, known_mimetype_html, mime, filecontents);
+    			    	//printf(returnhtml);
+    			    	//netconn_write(newconn, returnhtml, strlen(returnhtml), NETCONN_COPY);
+    			    	free(filecontents);
+    			    	//free(returnhtml);
+    			    }
+    		}
+
+
 
     		  //unsigned int s;
-    		  const char *input_key = "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    		  //const char *input_key = "dGhlIHNhbXBsZSBub25jZQ==258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    		  uint8_t sha_result[SHA1_160];
-    		  esp_sha(SHA1, (unsigned char *) input_key, strlen(input_key),  sha_result);
+    		  //uint8_t sha_result[SHA1_160];
+    		  //esp_sha(SHA1, (unsigned char *) input_key, strlen(input_key),  sha_result);
     		  //unsigned char *raw = (unsigned char *) input;
     		  //unsigned char *encoded =  base64_encode(raw, strlen(input), (size_t *) &s);
 
@@ -82,16 +136,22 @@ void http_serve_request(struct netconn *newconn) {
     		  //printf("Request received:\n%s\n", path);
     		  //printf("Path length:%d\n", path_length);
     		  //printf("SHA1:");
-    		  for (int i=0;i<SHA1_160; i++) {
+    		  //for (int i=0;i<SHA1_160; i++) {
     			  //printf("%x ", sha_result[i]);
-    		  }
+    		  //}
     		  //printf("\n");
     		  //printf("Base64 encode of abc - size:%d answer:%s ", s, encoded);
     	  }
     }
 
+    printf("About to close connection\n");
     netconn_close(newconn);
+    printf("About to delete netbuf\n");
     netbuf_delete(incoming_netbuf);
+
+}
+
+void return_html_sdcard() {
 
 }
 
@@ -99,9 +159,6 @@ void http_server(void *pvParameters) {
     struct netconn *conn, *newconn;
 
     sdcard_init();
-    char *filecontents;
-    filecontents = serve_file_from_sdcard("/boo.txt");
-    printf("Contents of file %s:%s\n", "/boo.txt",filecontents);
 
     printf("Starting web server...");
     conn = netconn_new(NETCONN_TCP);

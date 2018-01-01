@@ -111,7 +111,7 @@ char* serve_file_from_sdcard(char *path) {
 	        printf("result:%d!\n", fr);
 	        printf("Heap size: %d\n", xPortGetFreeHeapSize());
 
-	        char *buf = (char*) malloc(40);
+	        char *buf = (char*) malloc(fno.fsize + 1);
 
 	        if (buf == NULL) {
 	        	printf("sdcard:buf not allocated memory\n");
@@ -119,8 +119,9 @@ char* serve_file_from_sdcard(char *path) {
 	        }
 
 		    uint32_t b;
-	        f_read(&fil, buf, fno.fsize, &b);
+	        f_read(&fil, buf, fno.fsize + 1, &b);
 	        buf[fno.fsize]='\0';
+	        //*file_length = fno.fsize;
 	        //printf("%s\n", buf);
 
 	        /*
