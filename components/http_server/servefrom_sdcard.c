@@ -87,15 +87,15 @@ void sdcard_init() {
 	sdmmc_card_print_info(stdout, card);
 }
 
-void http_send_header(struct netconn *newconn, char *mime) {
-	const char *header = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: %s\n\n";
+void http_send_header(struct netconn *newconn, char *mime, int length) {
+	const char *header = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: %s\nLength: %d\n\n";
     char response_header[100];
-    sprintf(response_header, header, mime);
+    sprintf(response_header, header, mime, length);
     netconn_write(newconn, response_header, strlen(response_header), NETCONN_COPY);
 }
 
-void http_send_payload(struct netconn *newconn, char *payload) {
-	netconn_write(newconn, payload, strlen(payload), NETCONN_COPY);
+void http_send_payload(struct netconn *newconn, char *payload, int payload_size) {
+	netconn_write(newconn, payload, payload_size, NETCONN_COPY);
 }
 
 void http_send_footer(struct netconn *newconn) {
@@ -133,7 +133,7 @@ void serve_file_from_sdcard(struct netconn *newconn, char *path) {
 	        printf("result:%d!\n", fr);
 	        printf("Heap size: %d\n", xPortGetFreeHeapSize());
 
-	        char *buf = (char*) malloc(fno.fsize + 1);
+	        char *buf = (char*) malloc(fno.fsize);
 
 	        if (buf == NULL) {
 	        	printf("sdcard:buf not allocated memory\n");
@@ -141,11 +141,12 @@ void serve_file_from_sdcard(struct netconn *newconn, char *path) {
 	        }
 
 		    uint32_t b;
-	        f_read(&fil, buf, fno.fsize + 1, &b);
-	        buf[fno.fsize]='\0';
+	        f_read(&fil, buf, fno.fsize, &b);
+	        printf("Bytes read: %d\n", b);
+	        //buf[fno.fsize]='\0';
 
-	        http_send_header(newconn, "text/plain");
-	        http_send_payload(newconn, buf);
+	        http_send_header(newconn, "image/png", fno.fsize);
+	        http_send_payload(newconn, buf, fno.fsize);
 	        http_send_footer(newconn);
 
 	        f_close(&fil);
