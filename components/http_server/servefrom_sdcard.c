@@ -104,6 +104,27 @@ void http_send_footer(struct netconn *newconn) {
 }
 
 
+char* get_mimetype(char *path) {
+	char *file_extension = strchr(path, '.');
+    if (file_extension != NULL) {
+    	if (strcmp(file_extension,".txt") == 0) {
+    		return "text/plain";
+    	}
+    	else if (strcmp(file_extension,".css") == 0) {
+    		return "text/css";
+    	}
+    	else if (strcmp(file_extension,".js") == 0) {
+    		return "text/javascript";
+    	}
+    	else if (strcmp(file_extension,".png") == 0) {
+    		return "image/png";
+    	}
+    }
+
+    return NULL;
+
+}
+
 void serve_file_from_sdcard(struct netconn *newconn, char *path) {
 	char errorpage_404[] = "HTTP/1.0 404 Not Found\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n";
 
@@ -145,10 +166,11 @@ void serve_file_from_sdcard(struct netconn *newconn, char *path) {
 	        printf("Bytes read: %d\n", b);
 	        //buf[fno.fsize]='\0';
 
-	        http_send_header(newconn, "image/png", fno.fsize);
+
+	        char *mime = get_mimetype(path);
+	        http_send_header(newconn, mime, fno.fsize);
 	        http_send_payload(newconn, buf, fno.fsize);
 	        http_send_footer(newconn);
-
 	        f_close(&fil);
 	        break;
 

@@ -18,27 +18,6 @@
 #define HTTP_PORT 80
 #define SHA1_160 20
 
-char* get_mimetype(char *path) {
-	char *file_extension = strchr(path, '.');
-    if (file_extension != NULL) {
-    	if (strcmp(file_extension,".txt") == 0) {
-    		return "text/plain";
-    	}
-    	else if (strcmp(file_extension,".css") == 0) {
-    		return "text/css";
-    	}
-    	else if (strcmp(file_extension,".js") == 0) {
-    		return "text/javascript";
-    	}
-    	else if (strcmp(file_extension,".png") == 0) {
-    		return "image/png";
-    	}
-    }
-
-    return NULL;
-
-}
-
 void http_serve_request(struct netconn *newconn) {
     char html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n<!doctype html><html><body><div><a href=\"/boo\">Response 1</a></div><div><a></a></div></body></html>\n\n";
     char firstpage_html[] = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n<html><body><div><h1>Page 1</h1><div><a href=\"/\">Back</a></div></body></html>\n\n";
