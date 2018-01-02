@@ -1,5 +1,10 @@
 # espidf-playground
 
+## Setup
+- git clone this repo
+- make menuconfig -> Serial
+- make flash monitor
+
 ## Components
 - wifi-ap
 - http_server
@@ -18,6 +23,14 @@ SD card support:
 Running on port 8080.
 
 To test, I used [test.html](https://github.com/mohankumargupta/espidf-playground/blob/master/test_data/websockets/test.html)
+
+(Not served, just opened locally on PC)
+
+# TODO
+- http_server: handle large files 
+- websockets: handle payload larger than 127 bytes
+- reduce heap footprint
+
 
 
 
