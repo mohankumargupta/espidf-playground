@@ -1,5 +1,5 @@
 
 void sdcard_init();
 void sdcard_cleanup();
-char* serve_file_from_sdcard(char *path);
+void serve_file_from_sdcard(struct netconn *newconn, char *path);
 void sdcard_test_file();

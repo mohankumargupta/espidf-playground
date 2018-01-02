@@ -16,6 +16,9 @@
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "sdmmc_cmd.h"
+#include "lwip/api.h"
+//#include "lwip/arch.h"
+//#include "lwip/err.h"
 
 
 static const char *TAG = "servefrom_sdcard";
@@ -84,7 +87,26 @@ void sdcard_init() {
 	sdmmc_card_print_info(stdout, card);
 }
 
-char* serve_file_from_sdcard(char *path) {
+void http_send_header(struct netconn *newconn, char *mime) {
+	const char *header = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: %s\n\n";
+    char response_header[100];
+    sprintf(response_header, header, mime);
+    netconn_write(newconn, response_header, strlen(response_header), NETCONN_COPY);
+}
+
+void http_send_payload(struct netconn *newconn, char *payload) {
+	netconn_write(newconn, payload, strlen(payload), NETCONN_COPY);
+}
+
+void http_send_footer(struct netconn *newconn) {
+	char response_footer[] = "\n\n";
+	netconn_write(newconn, response_footer, strlen(response_footer), NETCONN_COPY);
+}
+
+
+void serve_file_from_sdcard(struct netconn *newconn, char *path) {
+	char errorpage_404[] = "HTTP/1.0 404 Not Found\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: text/html\n\n";
+
 	FRESULT fr;
 	    FILINFO fno;
 	    FIL fil;
@@ -115,36 +137,30 @@ char* serve_file_from_sdcard(char *path) {
 
 	        if (buf == NULL) {
 	        	printf("sdcard:buf not allocated memory\n");
-	        	return NULL;
+	        	return;
 	        }
 
 		    uint32_t b;
 	        f_read(&fil, buf, fno.fsize + 1, &b);
 	        buf[fno.fsize]='\0';
-	        //*file_length = fno.fsize;
-	        //printf("%s\n", buf);
 
-	        /*
-	        char buf[40];
-		    uint32_t b;
-	        f_read(&fil, &buf, fno.fsize,&b );
-	        buf[fno.fsize]='\0';
-	        printf("%s\n", buf);
-	        */
+	        http_send_header(newconn, "text/plain");
+	        http_send_payload(newconn, buf);
+	        http_send_footer(newconn);
 
 	        f_close(&fil);
-            return buf;
 	        break;
 
 	    case FR_NO_FILE:
 	        printf("It is not exist.\n");
+	        netconn_write(newconn, errorpage_404, sizeof(errorpage_404), NETCONN_COPY);
 	        break;
 
 	    default:
 	        printf("An error occured. (%d)\n", fr);
 	    }
 
-   return NULL;
+   return;
 }
 
 void sdcard_cleanup() {
