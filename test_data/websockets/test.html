@@ -10,20 +10,53 @@
       }
 
 
-      var ws = new WebSocket('ws://192.168.4.1:8080');
+      var ws = undefined;// = new WebSocket('ws://192.168.4.1:8080');
 
-      ws.onmessage = function(evt) {
-        console.log(JSON.parse(evt.data));
-      }
+
 
       document.addEventListener("DOMContentLoaded", function(){
+
+
+      setInterval(function () {
+        if (ws) {
+          if (ws.readyState == ws.OPEN) {
+            document.querySelector("#websockets-state").innerHTML = "Websocket connected";
+          }
+
+          else {
+            document.querySelector("#websockets-state").innerHTML = "Websocket not connected";        
+          }
+        }
+      }, 3000);
+
+
+      document.querySelector("#open-websocket").addEventListener('click', function() {
+          ws = new WebSocket('ws://192.168.4.1:8080');
+      ws.onmessage = function(evt) {
+        console.log(JSON.parse(evt.data));
+
+
+        var returnedData = document.querySelector("#returnedData");
+        returnedData.innerHTML = returnedData.innerHTML +   "<br/>" + evt.data;
+      }
+
+      });
+
+      document.querySelector("#close-websocket").addEventListener('click', function() {
+           ws.close();  
+      });
 
       document.querySelector("#boo").addEventListener('click', function() {
      
       		ws.send(JSON.stringify(msg));
 
-
+             
       });
+
+     document.querySelector("#clear-screen").addEventListener('click', function() {
+          document.querySelector("#returnedData").innerHTML = " ";
+     });
+
          
       });
       //alert('Hi');
@@ -33,6 +66,15 @@
 </script>
 </head>
 <body>
-  <button id="boo">click</button>
+  <button id="open-websocket">Open websocket</button>
+  <button id="close-websocket">Close websocket</button>
+  <button id="boo">Send data via websockets</button>
+    <button id="clear-screen">Clear screen</button>
+  <div id="websockets-state">
+    Not connected
+  </div>
+  <div id="returnedData" style="margin-top:30px;">
+    
+  </div>
 </body>
 </html>
