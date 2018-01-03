@@ -25,15 +25,19 @@
 //#define FALSE 0
 
 static const char* TAG = "websocket_server";
+static const char* FRAME_TAG = "websocket_server_frames";
 
+/*  Function called after websocket handshake is completed.
+ *
+ */
 void websockets_serve_frames(struct netconn *newconn) {
 	struct netbuf *incoming_netbuf;
 	char *data;
 	uint16_t data_length;
 
 	while (1) {
-		printf("Entering netconn_recv...\n");
-		printf("Heap size: %d\n", xPortGetFreeHeapSize());
+		ESP_LOGI(FRAME_TAG, "Entering netconn_recv...");
+		ESP_LOGI(FRAME_TAG, "Heap size: %d", xPortGetFreeHeapSize());
 		// blocking until get some websocket traffic from client
 		err_t err = netconn_recv(newconn, &incoming_netbuf);
 		if (err != ERR_OK) {
@@ -42,113 +46,118 @@ void websockets_serve_frames(struct netconn *newconn) {
 		// data contains websocket frame
 		err = netbuf_data(incoming_netbuf, (void **) &data, &data_length);
 
-
-
-
-	if (data_length == 0) {
+		if (data_length == 0) {
 			return;
-	}
-
-	if (data_length > 0)
-			{
-		printf("websocket frame first byte: %02x\n", data[0]);
-		printf("websocket frame second byte: %02x\n", data[1]);
-		if (data[0] != 0x81) {
-				return;
 		}
 
-	}
+		if (data_length > 0)
+				{
+			printf("websocket frame first byte: %02x\n", data[0]);
+			printf("websocket frame second byte: %02x\n", data[1]);
+			if (data[0] != 0x81) {
+				return;
+			}
 
-	// Masking key starts at the 3rd byte of the frame (data+2) if MASK (bit 8)  is 1
-	char masking_key[WEBSOCKETS_HEADER_MASKING_KEY];
-	strncpy(masking_key, data + 2, WEBSOCKETS_HEADER_MASKING_KEY);
+		}
 
-	// Payload length is bit 9-15 of websocket frame
-	int payload_length = data[1] & 0x7F;
-	//printf("payload_length:%d\n", payload_length);
+		// Masking key starts at the 3rd byte of the frame (data+2) if MASK (bit 8)  is 1
+		char masking_key[WEBSOCKETS_HEADER_MASKING_KEY];
+		strncpy(masking_key, data + 2, WEBSOCKETS_HEADER_MASKING_KEY);
 
-	// decoded will contain the unmasked payload
-	char decoded[payload_length + 1];
-	decoded[payload_length] = '\0';
+		// Payload length is bit 9-15 of websocket frame
+		int payload_length = data[1] & 0x7F;
+		//printf("payload_length:%d\n", payload_length);
 
-	// First 2 bytes header, next 4 bytes masking key, masked payload starts after (assuming MASK (bit 8) is 1)
-	const int start_of_payload_index = 6;
+		// decoded will contain the unmasked payload
+		char decoded[payload_length + 1];
+		decoded[payload_length] = '\0';
 
-	// To get decoded, loop through the bytes of data and XOR the byte with the (i modulo 4)th byte of masking_key.
-	for (int i = start_of_payload_index;
-			i < start_of_payload_index + payload_length; i++) {
-		char decoded_char = (data[i])
-				^ (masking_key[(i - start_of_payload_index) % 4]);
-		decoded[i - start_of_payload_index] = decoded_char;
-	}
+		// First 2 bytes header, next 4 bytes masking key, masked payload starts after (assuming MASK (bit 8) is 1)
+		const int start_of_payload_index = 6;
 
-	printf("decoded:%s\n", decoded);
-	printf("\n");
+		// To get decoded, loop through the bytes of data and XOR the byte with the (i modulo 4)th byte of masking_key.
+		for (int i = start_of_payload_index;
+				i < start_of_payload_index + payload_length; i++) {
+			char decoded_char = (data[i])
+					^ (masking_key[(i - start_of_payload_index) % 4]);
+			decoded[i - start_of_payload_index] = decoded_char;
+		}
 
-	/*
-	 *  the incoming json has this form
-	 *  {
-	 *   "datapoints": 10,
-	 *   "type": "scatter",
-	 *   "offset": 100
-	 *  }
-	 *
-	 */
-	cJSON *root = cJSON_Parse(decoded);
+		printf("decoded:%s\n", decoded);
+		printf("\n");
 
-	cJSON *datapoints = cJSON_GetObjectItemCaseSensitive(root, "datapoints");
-	if (cJSON_IsNumber(datapoints)) {
-		printf("datapoints:%d\n", datapoints->valueint);
-	}
+		/*
+		 *  the incoming json has this form
+		 *  {
+		 *   "datapoints": 10,
+		 *   "type": "scatter",
+		 *   "offset": 100
+		 *  }
+		 *
+		 */
+		cJSON *root = cJSON_Parse(decoded);
 
-	cJSON *offset = cJSON_GetObjectItemCaseSensitive(root, "offset");
-	if (cJSON_IsNumber(offset)) {
-		printf("offset:%d\n", offset->valueint);
-	}
+		cJSON *datapoints = cJSON_GetObjectItemCaseSensitive(root,
+				"datapoints");
+		if (cJSON_IsNumber(datapoints)) {
+			printf("datapoints:%d\n", datapoints->valueint);
+		}
 
-	cJSON *plot_type = cJSON_GetObjectItemCaseSensitive(root, "type");
-	printf("plot_type:%s\n", plot_type->valuestring);
+		cJSON *offset = cJSON_GetObjectItemCaseSensitive(root, "offset");
+		if (cJSON_IsNumber(offset)) {
+			printf("offset:%d\n", offset->valueint);
+		}
 
-	int number_of_datapoints = datapoints->valueint;
-	int x_axis[number_of_datapoints];
-	for (int i = 1; i <= number_of_datapoints; i++) {
-		x_axis[i - 1] = i;
-	}
-	int y_axis[number_of_datapoints];
-	for (int i = 0; i < number_of_datapoints; i++) {
-		y_axis[i] = 110 + i;
-	}
+		cJSON *plot_type = cJSON_GetObjectItemCaseSensitive(root, "type");
+		printf("plot_type:%s\n", plot_type->valuestring);
 
-	cJSON *x = cJSON_CreateIntArray(x_axis, number_of_datapoints);
-	cJSON *y = cJSON_CreateIntArray(y_axis, number_of_datapoints);
+		int number_of_datapoints = datapoints->valueint;
+		int x_axis[number_of_datapoints];
+		for (int i = 1; i <= number_of_datapoints; i++) {
+			x_axis[i - 1] = i;
+		}
+		int y_axis[number_of_datapoints];
+		for (int i = 0; i < number_of_datapoints; i++) {
+			y_axis[i] = 110 + i;
+		}
 
-	cJSON_AddItemToObject(root, "x", x);
-	//cJSON_AddItemToObject(root, "y" , y);
+		cJSON *x = cJSON_CreateIntArray(x_axis, number_of_datapoints);
+		cJSON *y = cJSON_CreateIntArray(y_axis, number_of_datapoints);
 
-	//printf("%s\n", cJSON_Print(root));
-	char *json = cJSON_Print(root);
-	//printf("JSON:%s\n JSON Length:%d\n", json, strlen(json));
+		cJSON_AddItemToObject(root, "x", x);
+		//cJSON_AddItemToObject(root, "y" , y);
 
-	char header[2];
-	header[0] = 0x81;
-	header[1] = strlen(json);
+		//printf("%s\n", cJSON_Print(root));
+		char *json = cJSON_Print(root);
+		//printf("JSON:%s\n JSON Length:%d\n", json, strlen(json));
 
-	vTaskDelay(1500 / portTICK_PERIOD_MS);
-	err_t result = netconn_write(newconn, header, sizeof(header), NETCONN_COPY);
-	result = netconn_write(newconn, json, strlen(json), NETCONN_COPY);
+		char header[2];
+		header[0] = 0x81;
+		header[1] = strlen(json);
 
-	free(json);
-	cJSON_Delete(root);
+		vTaskDelay(1500 / portTICK_PERIOD_MS);
+		err_t result = netconn_write(newconn, header, sizeof(header),
+				NETCONN_COPY);
+		result = netconn_write(newconn, json, strlen(json), NETCONN_COPY);
 
-	if (result != ERR_OK) {
-		printf("whoopsys\n");
+		free(json);
+		cJSON_Delete(root);
 
-	}
+		if (result != ERR_OK) {
+			printf("whoopsys\n");
 
+		}
 
 	}
 }
 
+/*
+ * Function called when there is a HTTP websocket request from client.
+ *
+ * newconn: netconn connection object
+ * data: HTTP request
+ * data_length: Length of HTTP Request
+ */
 void websockets_handshake(struct netconn *newconn, char *data,
 		uint32_t data_length) {
 	const char WEBSOCKET_GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -156,26 +165,8 @@ void websockets_handshake(struct netconn *newconn, char *data,
 	const char WEBSOCKET_RSP[] =
 			"HTTP/1.1 101 Switching Protocols \r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %.*s\r\n\r\n";
 
-	printf("Entering websocket handshake...\n");
-	printf("Heap size: %d\n", xPortGetFreeHeapSize());
-	printf("Why does this not work?\n");
-	//vTaskDelay(1500 / portTICK_PERIOD_MS);
-
-	//err_t err = netconn_recv(newconn, &incoming_netbuf);
-	//printf("err:%d\n", err);
-	//if (err != ERR_OK || incoming_netbuf == NULL) {
-		//ESP_LOGI(TAG, "websocket handshake:netconn_recv failed");
-	//printf("websocket handshake:netconn_recv\n");
-	//return;
-	//}
-	//err = netbuf_data(incoming_netbuf, (void **) &data, &data_length);
-	//if (err != ERR_OK) {
-		//ESP_LOGI(TAG, "websocket handshake:netconn_data failed");
-	//printf("websocket handshake: netconn_data");
-	//return;
-	//}
-
-	printf("too hard\n");
+	ESP_LOGI(TAG, "Entering websocket handshake...");
+	ESP_LOGI(TAG, "Heap size: %d", xPortGetFreeHeapSize());
 
 	// Find the start of the sec_websocket_key value in data
 	char *sec_websocket_key_start = strstr(data, WEBSOCKET_KEY)
@@ -193,6 +184,13 @@ void websockets_handshake(struct netconn *newconn, char *data,
 	uint8_t sha_result[SHA1_160];
 	esp_sha(SHA1, (unsigned char *) new_sec_websocket_key,
 			strlen(new_sec_websocket_key), sha_result);
+	/*
+	 printf("SHA1:");
+	 for (int i = 0; i < SHA1_160; i++) {
+	 printf("%x ", sha_result[i]);
+	 }
+	 printf("\n");
+	 */
 
 	//Then base64
 	uint32_t s; // base64 encoded_key length
@@ -207,76 +205,7 @@ void websockets_handshake(struct netconn *newconn, char *data,
 	vTaskDelay(1500 / portTICK_PERIOD_MS);
 	netconn_write(newconn, buf, strlen(buf), NETCONN_COPY);
 	websockets_serve_frames(newconn);
-	//netconn_close(newconn);
-	//netbuf_delete(incoming_netbuf);
-	//netbuf_delete(incoming_netbuf);
-
-
-	// Now ready to accept websocket traffic from client
-	/*
-	while (true) {
-		printf("Entering netconn_recv...\n");
-		printf("Heap size: %d\n", xPortGetFreeHeapSize());
-		// blocking until get some websocket traffic from client
-		err_t err = netconn_recv(newconn, &incoming_netbuf);
-		if (err != ERR_OK) {
-			continue;
-		}
-		// data contains websocket frame
-		err = netbuf_data(incoming_netbuf, (void **) &data, &data_length);
-
-		if (err != ERR_OK) {
-			printf("Oh oh\n");
-			continue;
-		}
-
-		if (data_length == 0) {
-			printf("no");
-			continue;
-		}
-
-		if (data_length == 32) {
-			printf("Something went wrong:%s\n", data);
-			continue;
-		}
-
-		if (websockets_serve_frames(newconn, data, data_length) == FALSE) {
-			netconn_close(newconn);
-			netconn_delete(newconn);
-			netbuf_delete(incoming_netbuf);
-			//free(incoming_netbuf);
-			incoming_netbuf = NULL;
-			break;
-		}
-
-	}
-	 */
-
-
 }
-
-/*
-void websockets_callback(struct netconn *conn, enum netconn_evt event,
-		uint16_t len) {
-	switch (event) {
-	case NETCONN_EVT_RCVPLUS:
-		printf("receive plus\n");
-		break;
-	case NETCONN_EVT_RCVMINUS:
-		printf("receive minus\n");
-		break;
-	case NETCONN_EVT_SENDPLUS:
-		printf("send plus\n");
-		break;
-	case NETCONN_EVT_SENDMINUS:
-		printf("send minus\n");
-		break;
-	default:
-		printf("None of the above");
-
-	}
-}
- */
 
 void websockets_handle_request(struct netconn *newconn) {
 
@@ -284,7 +213,6 @@ void websockets_handle_request(struct netconn *newconn) {
 	char *data;
 	uint16_t data_length;
 	const char WEBSOCKET_HANDSHAKE_UPGRADE[] = "Upgrade: websocket";
-	//char *handshake;
 
 	// Grab incoming data and data_length
 	err_t err = netconn_recv(newconn, &incoming_netbuf);
@@ -298,39 +226,14 @@ void websockets_handle_request(struct netconn *newconn) {
 		return;
 	}
 
-	// Test whether request is a websocket handshake
-	//handshake = strstr(data, WEBSOCKET_HANDSHAKE_UPGRADE);
-	//printf("Handshake: %s\n", handshake);
-	//printf("Data:\n%s\n", data);
-	//printf("Data Length: %d\n", data_length);
+	//printf("Websocket Handshake Data:\n%s\n", data);
+	//printf("Websocket Data Length: %d\n", data_length);
 
 	if (strstr(data, WEBSOCKET_HANDSHAKE_UPGRADE) != NULL) {
 		ESP_LOGI(TAG, "Websocket handshake incoming...");
 		websockets_handshake(newconn, data, data_length);
 	}
 
-	/*
-	else if (data_length > 0) {
-		ESP_LOGI(TAG, "websocket frame first byte: %02x\n", data[0]);
-		ESP_LOGI(TAG, "websocket frame second byte: %02x\n", data[1]);
-
-		// expecting opcode for text data set in websocket frame
-		if (data[0] == 0x81) {
-			//Must be a websocket frame
-			websockets_serve_frames(newconn, data, data_length);
-
-		}
-		else {
-			// Probably a 0x88 which is connection close
-
-		}
-
-
-	}
-	 */
-	//netconn_close(newconn);
-	//netconn_delete(newconn);
-//netbuf_delete(incoming_netbuf);
 
 }
 
@@ -343,7 +246,6 @@ void websockets_server(void *pvParameters) {
 
 	while (netconn_accept(conn, &newconn) == ERR_OK) {
 		ESP_LOGI(TAG, "Accepting new websocket connection...");
-		//websockets_handshake(newconn);
 		websockets_handle_request(newconn);
 		ESP_LOGI(TAG, "Leaving websocket connnection...");
 		vTaskDelay(1500 / portTICK_PERIOD_MS);
