@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Vue Chartkick</title>
+
+    <script src="https://unpkg.com/vue@2.5.9/dist/vue.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+<script src="https://unpkg.com/vue-chartjs/dist/vue-chartjs.min.js"></script>
+  </head>
+  <body>
+<div class="app">
+
+  <line-chart></line-chart>
+</div>
+
+    <script>
+
+Vue.component('line-chart', {
+  extends: VueChartJs.Scatter,
+  mounted () {
+    this.renderChart({
+      datasets: [
+        {
+          label: 'Scatter Plot',
+          backgroundColor: 'red',
+          data: [{x: 1, y: 40},
+                 {x: 2, y:41},
+                 {x: 3, y: 42},
+                 {x: 4, y:43},
+                 {x: 5, y: 44},
+                 {x: 6, y:45}
+                 ]
+        }
+      ]
+    }, {responsive: true, maintainAspectRatio: false,
+scales: {
+            xAxes: [{
+                ticks: {
+                    beginAtZero:true,
+                    suggestedMax:7
+                }
+            }],
+            yAxes:[{
+              ticks: {
+                suggestedMin: 20,
+                suggestedMax: 60
+             } 
+            }
+            ]
+        },
+
+
+    })
+  }
+  
+})
+
+var vm = new Vue({
+  el: '.app',
+  data: {
+    
+  }
+})
+
+    </script>
+  </body>
+</html>
