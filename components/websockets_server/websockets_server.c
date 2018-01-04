@@ -21,8 +21,7 @@
 // Masking key is 4 bytes long
 #define WEBSOCKETS_HEADER_MASKING_KEY 4
 
-//#define TRUE 1
-//#define FALSE 0
+#define WEB_DELAY_IN_MS 1500
 
 static const char* TAG = "websocket_server";
 static const char* FRAME_TAG = "websocket_server_frames";
@@ -32,7 +31,7 @@ static const char* FRAME_TAG = "websocket_server_frames";
  */
 void websockets_serve_frames(struct netconn *newconn) {
 	struct netbuf *incoming_netbuf;
-	char *data;
+	char *data; //Websocket payload usually masked by client
 	uint16_t data_length;
 
 	while (1) {
@@ -52,8 +51,8 @@ void websockets_serve_frames(struct netconn *newconn) {
 
 		if (data_length > 0)
 				{
-			printf("websocket frame first byte: %02x\n", data[0]);
-			printf("websocket frame second byte: %02x\n", data[1]);
+			//printf("websocket frame first byte: 0x%02x\n", data[0]);
+			//printf("websocket frame second byte: 0x%02x\n", data[1]);
 			if (data[0] != 0x81) {
 				return;
 			}
@@ -78,8 +77,7 @@ void websockets_serve_frames(struct netconn *newconn) {
 		// To get decoded, loop through the bytes of data and XOR the byte with the (i modulo 4)th byte of masking_key.
 		for (int i = start_of_payload_index;
 				i < start_of_payload_index + payload_length; i++) {
-			char decoded_char = (data[i])
-					^ (masking_key[(i - start_of_payload_index) % 4]);
+			char decoded_char = (data[i]) ^ (masking_key[(i - start_of_payload_index) % 4]);
 			decoded[i - start_of_payload_index] = decoded_char;
 		}
 
@@ -125,19 +123,51 @@ void websockets_serve_frames(struct netconn *newconn) {
 		cJSON *y = cJSON_CreateIntArray(y_axis, number_of_datapoints);
 
 		cJSON_AddItemToObject(root, "x", x);
-		//cJSON_AddItemToObject(root, "y" , y);
+		cJSON_AddItemToObject(root, "y", y);
 
 		//printf("%s\n", cJSON_Print(root));
 		char *json = cJSON_Print(root);
 		//printf("JSON:%s\n JSON Length:%d\n", json, strlen(json));
 
-		char header[2];
-		header[0] = 0x81;
-		header[1] = strlen(json);
+		uint16_t send_payload_length = strlen(json);
 
+		printf("Send payload length: %d\n", send_payload_length);
+
+		//char header[2];
+		char *header = NULL;
+
+		uint8_t header_length = 0;
+
+		if (send_payload_length <= 125) {
+			header_length = 2;
+			header = (char *) malloc(header_length);
+			header[0] = 0x81;
+			header[1] = send_payload_length;
+
+		}
+
+		else if (send_payload_length > 125 && send_payload_length < 65535) {
+			header_length = 4;
+			header = (char *) malloc(header_length);
+			header[0] = 0x81;
+			header[1] = 126;
+			header[2] = (send_payload_length >> 8) & 0xFF;
+			header[3] = send_payload_length & 0xFF;
+		}
+
+		// Don't handle websocket frames bigger anf 65536 bytes
+		else {
+			ESP_LOGE(TAG, "Frame Payload size bigger than 65535 bytes");
+			return;
+		}
+
+
+		printf("Websocket frame send header: 0x%02x 0x%02x\n", header[0], header[1]);
+		printf("Websocket frame send payload: %s\n", json);
 		vTaskDelay(1500 / portTICK_PERIOD_MS);
-		err_t result = netconn_write(newconn, header, sizeof(header),
+		err_t result = netconn_write(newconn, header, header_length,
 				NETCONN_COPY);
+		vTaskDelay(1500 / portTICK_PERIOD_MS);
 		result = netconn_write(newconn, json, strlen(json), NETCONN_COPY);
 
 		free(json);
@@ -248,7 +278,7 @@ void websockets_server(void *pvParameters) {
 		ESP_LOGI(TAG, "Accepting new websocket connection...");
 		websockets_handle_request(newconn);
 		ESP_LOGI(TAG, "Leaving websocket connnection...");
-		vTaskDelay(1500 / portTICK_PERIOD_MS);
+		vTaskDelay(WEB_DELAY_IN_MS / portTICK_PERIOD_MS);
 	}
 
 	netconn_close(conn);

@@ -1,8 +1,10 @@
 # espidf-playground
 
 ## Setup
-- git clone this repo
-- make menuconfig -> Serial
+- git clone https://github.com/mohankumargupta/espidf-playground.git
+- cd espidf-playground
+- make menuconfig -> Serial flasher config -> Default serial port
+-                 -> Component config -> FAT filesystem support -> Long filenames on Stack
 - make flash monitor
 
 ## Components
@@ -30,12 +32,15 @@ Didn't need pullups or jumpers for GPIO0 and GPIO2, just using standard SPI pins
 ### websockets_server
 Running on port 8080.
 
+- websockets reference [here](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers)
+
 To test, I used [test.html](https://github.com/mohankumargupta/espidf-playground/blob/master/test_data/websockets/test.html)
 
 (Not served, just opened locally on PC)
 
 # ISSUES
-- Using a SD Card adapter with a micro SD card. The adpater is connected to esp32 using soldered jumper wires. Need to apply pressure on SD card in order for contacts to be held on adapter.
+- Using a SD Card adapter with a micro SD card. The adapter is connected to esp32 using soldered jumper wires. Need to apply pressure on SD card in order for contacts to be held on adapter.
+- For SD card, try example first https://github.com/espressif/esp-idf/tree/master/examples/storage/sd_card
 - For some reason, not accepting filenames with _ or - on SD card. f_stat returning FR_INVALID_NAME. 
 
 # TODO
