@@ -39,7 +39,6 @@ To test, I used [test.html](https://github.com/mohankumargupta/espidf-playground
 - For some reason, not accepting filenames with _ or - on SD card. f_stat returning FR_INVALID_NAME. 
 
 # TODO
-- http_server: handle large files 
 - websockets: handle payload larger than 127 bytes
 - reduce heap footprint
 
