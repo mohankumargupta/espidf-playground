@@ -73,7 +73,7 @@ void sdcard_init() {
 }
 
 // HTTP Response payload
-void http_send_header(struct netconn *newconn, char *mime, int length) {
+void http_send_header(struct netconn *newconn, char *mime, uint32_t length) {
 	const char *header = "HTTP/1.0 200 OK\nDate: Fri, 22 Dec 2017 01:28:02 GMT\nServer: Esp32\nContent-Type: %s\nLength: %d\n\n";
     char response_header[100];
     sprintf(response_header, header, mime, length);
@@ -81,7 +81,7 @@ void http_send_header(struct netconn *newconn, char *mime, int length) {
 }
 
 // HTTP Response payload
-void http_send_payload(struct netconn *newconn, char *payload, int payload_size) {
+void http_send_payload(struct netconn *newconn, char *payload, uint32_t payload_size) {
 	netconn_write(newconn, payload, payload_size, NETCONN_NOCOPY);
 }
 
@@ -98,6 +98,9 @@ char* get_mimetype(char *path) {
     	if (strcmp(file_extension,".txt") == 0) {
     		return "text/plain";
     	}
+    	else if (strcmp(file_extension, ".html") == 0) {
+			return "text/html";
+		}
     	else if (strcmp(file_extension,".css") == 0) {
     		return "text/css";
     	}
