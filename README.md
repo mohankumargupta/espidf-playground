@@ -38,13 +38,8 @@ To test, I used [test.html](https://github.com/mohankumargupta/espidf-playground
 
 (Not served, just opened locally on PC)
 
-# ISSUES
-- Using a SD Card adapter with a micro SD card. The adapter is connected to esp32 using soldered jumper wires. Need to apply pressure on SD card in order for contacts to be held on adapter.
-- For SD card, try example first https://github.com/espressif/esp-idf/tree/master/examples/storage/sd_card
-- For some reason, not accepting filenames with _ or - on SD card. f_stat returning FR_INVALID_NAME. 
-
 # TODO
-- websockets: handle payload larger than 127 bytes
+- change SD card pinouts back to default as the SD Card example
 - reduce heap footprint
 
 
