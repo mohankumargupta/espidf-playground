@@ -1,16 +1,24 @@
 # espidf-playground
 
 ## Setup
-- git clone https://github.com/mohankumargupta/espidf-playground.git
-- cd espidf-playground
-- make menuconfig -> Serial flasher config -> Default serial port
--                 -> Component config -> FAT filesystem support -> Long filenames on Heap
-- make flash monitor
+[Install toolchain and ESP-IDF](http://esp-idf.readthedocs.io/en/latest/get-started/)
 
+```sh
+git clone https://github.com/mohankumargupta/espidf-playground.git
+cd espidf-playground
+# make menuconfig 
+#    Serial flasher config -> Default serial port
+#    Component config -> FAT filesystem support -> Long filenames on Heap
+make flash monitor
+```
 ## Components
 - wifi-ap
 - http_server
 - websockets_server
+
+## Tested on ESP32s
+[Pinouts](https://www.cnx-software.com/wp-content/uploads/2017/05/ESP32-T-Pinout-Diagram-Large.jpg)
+
 
 ### wifi-ap
 Default SSID and password are found [here](https://github.com/mohankumargupta/espidf-playground/blob/master/components/wifi_ap/include/wifi_ap.h). Default IP Address is 192.168.4.1
