@@ -143,7 +143,8 @@ void serve_file_from_sdcard(struct netconn *newconn, char *path) {
 				(fno.fattrib & AM_ARC) ? 'A' : '-');
 
 		fr = f_open(&fil, path, FA_READ);
-		printf("result:%d!\n", fr);
+		ESP_LOGI(TAG, "File open from SD card return code:%d", fr)
+		;
 		printf("Heap size: %d\n", xPortGetFreeHeapSize());
 
 		//char *buf = (char*) malloc(fno.fsize);
@@ -160,15 +161,16 @@ void serve_file_from_sdcard(struct netconn *newconn, char *path) {
 
 		// Because of limited heap space, need to read file in chunks and send over wire
 		uint32_t b;
-		uint32_t total_filesize_sent = 0;
+		//uint32_t total_filesize_sent = 0;
 		char buf[BUFFER_CHUNK_SIZE];
 		while (1) {
 			f_read(&fil, buf, BUFFER_CHUNK_SIZE, &b);
 
 			//ESP_LOGI(TAG, "Heap size: %d", xPortGetFreeHeapSize());
 			http_send_payload(newconn, buf, b);
-			total_filesize_sent = total_filesize_sent + b;
-			printf("Bytes read: %u...", total_filesize_sent);
+			//total_filesize_sent = total_filesize_sent + b;
+			//printf("Bytes read: %u...", total_filesize_sent);
+
 			//If the number of bytes read is less than the number of bytes we requested to read,
 			//it implies that the entire file has been read, so we are done
 			if (b < BUFFER_CHUNK_SIZE) {

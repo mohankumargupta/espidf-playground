@@ -4,6 +4,7 @@
 #include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_event_loop.h"
+#include "esp_log.h"
 #include "lwip/api.h"
 #include "lwip/arch.h"
 #include "lwip/err.h"
@@ -14,6 +15,8 @@
 
 #define HTTP_PORT 80
 #define SHA1_160 20
+
+static const char *TAG = "http_server";
 
 // Received an incoming request
 void http_serve_request(struct netconn *newconn) {
@@ -70,9 +73,9 @@ void http_serve_request(struct netconn *newconn) {
     	  }
     }
 
-    printf("About to close connection\n");
+	ESP_LOGI(TAG, "About to close connection");
     netconn_close(newconn);
-    printf("About to delete netbuf\n");
+	ESP_LOGI(TAG, "About to delete netbuf");
     netbuf_delete(incoming_netbuf);
 
 }
@@ -82,7 +85,7 @@ void http_server(void *pvParameters) {
 
     sdcard_init();
 
-    printf("Starting web server...");
+	ESP_LOGI(TAG, "Starting web server...");
     conn = netconn_new(NETCONN_TCP);
     netconn_bind(conn, NULL, HTTP_PORT);
     netconn_listen(conn);
@@ -91,7 +94,7 @@ void http_server(void *pvParameters) {
     	  http_serve_request(newconn);
     }
 
-    printf("Ending web server...");
+	ESP_LOGI(TAG, "Ending web server...");
 
     netconn_close(conn);
     netconn_delete(conn);

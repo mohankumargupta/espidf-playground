@@ -24,7 +24,7 @@ static const char* TAG = "websocket_server";
 static const char* FRAME_TAG = "websocket_server_frames";
 
 // Process incoming websocket frame
-void websockets_serve_frame(struct netconn *newconn) {
+int websockets_serve_frame(struct netconn *newconn) {
 	struct netbuf *incoming_netbuf;
 	char *data; //Websocket payload usually masked by client
 	uint16_t data_length;
@@ -36,20 +36,20 @@ void websockets_serve_frame(struct netconn *newconn) {
 	// blocking until get some websocket traffic from client
 	err_t err = netconn_recv(newconn, &incoming_netbuf);
 	if (err != ERR_OK) {
-		return;
+		return -1;
 	}
 	// data contains websocket frame
 	err = netbuf_data(incoming_netbuf, (void **) &data, &data_length);
 
 	if (data_length == 0) {
-		return;
+		return -1;
 	}
 
 	if (data_length > 0) {
 		printf("websocket frame first byte: 0x%02x\n", data[0]);
 		printf("websocket frame second byte: 0x%02x\n", data[1]);
 		if (data[0] != 0x81) {
-			return;
+			return -1;
 		}
 
 		if (data_length < 126) {
@@ -96,7 +96,7 @@ void websockets_serve_frame(struct netconn *newconn) {
 	char *json = process_incoming_websocket_frame_payload(unmasked_payload);
 
 	if (json == NULL) {
-		return;
+		return 0;
 	}
 
 	uint16_t send_payload_length = strlen(json);
@@ -127,15 +127,15 @@ void websockets_serve_frame(struct netconn *newconn) {
 	// Don't handle websocket frames bigger than 65535 bytes
 	else {
 		ESP_LOGE(TAG, "Frame Payload size bigger than 65535 bytes");
-		return;
+		return 0;
 	}
 
 	//printf("Websocket frame send header: 0x%02x 0x%02x\n", header[0], header[1]);
 	//printf("Websocket frame send payload: %s\n", json);
 	//vTaskDelay(1500 / portTICK_PERIOD_MS);
-	err_t result = netconn_write(newconn, header, header_length, NETCONN_COPY);
+	err_t result = netconn_write(newconn, header, header_length, NETCONN_NOCOPY);
 	//vTaskDelay(1500 / portTICK_PERIOD_MS);
-	result = netconn_write(newconn, json, strlen(json), NETCONN_COPY);
+	result = netconn_write(newconn, json, strlen(json), NETCONN_NOCOPY);
 
 	if (header != NULL) {
 		free(header);
@@ -150,6 +150,7 @@ void websockets_serve_frame(struct netconn *newconn) {
 
 	}
 
+	return 0;
 }
 
 /*  Function called after websocket handshake is completed.
@@ -157,7 +158,9 @@ void websockets_serve_frame(struct netconn *newconn) {
  */
 void websockets_serve_frames(struct netconn *newconn) {
 	while (1) {
-		websockets_serve_frame(newconn);
+		if (websockets_serve_frame(newconn) != 0) {
+			break;
+		}
 	}
 }
 
