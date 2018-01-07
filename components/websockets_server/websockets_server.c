@@ -28,6 +28,8 @@ void websockets_serve_frame(struct netconn *newconn) {
 	struct netbuf *incoming_netbuf;
 	char *data; //Websocket payload usually masked by client
 	uint16_t data_length;
+	uint16_t masking_key_index = 0;
+	uint16_t payload_length = 0;
 
 	ESP_LOGI(FRAME_TAG, "Entering netconn_recv...");
 	ESP_LOGI(FRAME_TAG, "Heap size: %d", xPortGetFreeHeapSize());
@@ -44,28 +46,42 @@ void websockets_serve_frame(struct netconn *newconn) {
 	}
 
 	if (data_length > 0) {
-		//printf("websocket frame first byte: 0x%02x\n", data[0]);
-		//printf("websocket frame second byte: 0x%02x\n", data[1]);
+		printf("websocket frame first byte: 0x%02x\n", data[0]);
+		printf("websocket frame second byte: 0x%02x\n", data[1]);
 		if (data[0] != 0x81) {
 			return;
 		}
+
+		if (data_length < 126) {
+			masking_key_index = 2;
+			// Payload length is bit 9-15 of websocket frame
+			payload_length = data[1] & 0x7F;
+
+		}
+
+		else {
+			masking_key_index = 4;
+			// Payload length is bit 16-31 of websocket frame
+			payload_length = data[2] << 8;
+			payload_length += data[3];
+		}
+
+		printf("payload_length:%d\n", payload_length);
 
 	}
 
 	// Masking key starts at the 3rd byte of the frame (data+2) if MASK (bit 8)  is 1
 	char masking_key[WEBSOCKETS_HEADER_MASKING_KEY];
-	strncpy(masking_key, data + 2, WEBSOCKETS_HEADER_MASKING_KEY);
+	strncpy(masking_key, data + masking_key_index, WEBSOCKETS_HEADER_MASKING_KEY);
 
-	// Payload length is bit 9-15 of websocket frame
-	int payload_length = data[1] & 0x7F;
-	//printf("payload_length:%d\n", payload_length);
+
 
 	// the payload of the incoming websocket frame are masked with the masking key
 	char unmasked_payload[payload_length + 1];
 	unmasked_payload[payload_length] = '\0';
 
-	// First 2 bytes header, next 4 bytes masking key, masked payload starts after (assuming MASK (bit 8) is 1)
-	const int start_of_payload_index = 6;
+	// First 2 bytes header,then optionally , next 4 bytes masking key, masked payload starts after (assuming MASK (bit 8) is 1)
+	int start_of_payload_index = masking_key_index + 4;
 
 	// To unmask, loop through the bytes of data and XOR the byte with the (i modulo 4)th byte of masking_key.
 	for (int i = start_of_payload_index;
@@ -78,6 +94,10 @@ void websockets_serve_frame(struct netconn *newconn) {
 
 	// Process incoming json and prepare response json
 	char *json = process_incoming_websocket_frame_payload(unmasked_payload);
+
+	if (json == NULL) {
+		return;
+	}
 
 	uint16_t send_payload_length = strlen(json);
 	//printf("Send payload length: %d\n", send_payload_length);
@@ -112,9 +132,9 @@ void websockets_serve_frame(struct netconn *newconn) {
 
 	//printf("Websocket frame send header: 0x%02x 0x%02x\n", header[0], header[1]);
 	//printf("Websocket frame send payload: %s\n", json);
-	vTaskDelay(1500 / portTICK_PERIOD_MS);
+	//vTaskDelay(1500 / portTICK_PERIOD_MS);
 	err_t result = netconn_write(newconn, header, header_length, NETCONN_COPY);
-	vTaskDelay(1500 / portTICK_PERIOD_MS);
+	//vTaskDelay(1500 / portTICK_PERIOD_MS);
 	result = netconn_write(newconn, json, strlen(json), NETCONN_COPY);
 
 	if (header != NULL) {

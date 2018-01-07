@@ -7,7 +7,14 @@
         datapoints: 10,
         type: 'scatter',
         offset: 100
-      }
+      };
+
+      var msg2 = {
+        datapoints: 10,
+        type: 'scatter',
+        offset: 100,
+        extra: "This extra field is so that the websocket payload length is greater than 126"
+      };
 
 
       var ws = undefined;// = new WebSocket('ws://192.168.4.1:8080');
@@ -47,10 +54,11 @@
       });
 
       document.querySelector("#boo").addEventListener('click', function() {
-     
       		ws.send(JSON.stringify(msg));
-
-             
+      });
+      
+      document.querySelector("#boo2").addEventListener('click', function() {
+      		ws.send(JSON.stringify(msg2)); 
       });
 
      document.querySelector("#clear-screen").addEventListener('click', function() {
@@ -67,8 +75,10 @@
 </head>
 <body>
   <button id="open-websocket">Open websocket</button>
+  <button id="boo">Send small data via websockets</button>
+  <button id="boo2">Send larger data via websockets</button>
   <button id="close-websocket">Close websocket</button>
-  <button id="boo">Send data via websockets</button>
+
     <button id="clear-screen">Clear screen</button>
   <div id="websockets-state">
     Not connected

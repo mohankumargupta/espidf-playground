@@ -19,7 +19,14 @@
  * returns the response payload to be sent
  */
 char* process_incoming_websocket_frame_payload(char *data) {
+	printf("Data: %s\n", data);
 	cJSON *root = cJSON_Parse(data);
+	if (root != NULL) {
+		printf("root not null\n");
+	} else {
+		printf("root is null\n");
+		return NULL;
+	}
 
 	cJSON *datapoints = cJSON_GetObjectItemCaseSensitive(root, "datapoints");
 	if (cJSON_IsNumber(datapoints)) {
@@ -32,7 +39,10 @@ char* process_incoming_websocket_frame_payload(char *data) {
 	}
 
 	cJSON *plot_type = cJSON_GetObjectItemCaseSensitive(root, "type");
-	printf("plot_type:%s\n", plot_type->valuestring);
+	if (plot_type) {
+		printf("plot_type:%s\n", plot_type->valuestring);
+	}
+
 
 	// Generate some dummy data for X
 	int number_of_datapoints = datapoints->valueint;
