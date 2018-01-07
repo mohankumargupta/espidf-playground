@@ -48,7 +48,7 @@ To test, I used [test.html](https://github.com/mohankumargupta/espidf-playground
 
 # BUGS
 - not able to recover heap space after sending websocket frame or closing websocket connection
-- mutiple websocket connections not currently supported.
+- multiple websocket connections not currently supported.
 
 
 
