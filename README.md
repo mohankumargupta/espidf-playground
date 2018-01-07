@@ -4,7 +4,7 @@
 - git clone https://github.com/mohankumargupta/espidf-playground.git
 - cd espidf-playground
 - make menuconfig -> Serial flasher config -> Default serial port
--                 -> Component config -> FAT filesystem support -> Long filenames on Stack
+-                 -> Component config -> FAT filesystem support -> Long filenames on Heap
 - make flash monitor
 
 ## Components

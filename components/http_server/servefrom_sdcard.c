@@ -17,11 +17,11 @@
 #include "driver/sdspi_host.h"
 #include "sdmmc_cmd.h"
 #include "lwip/api.h"
-//#include "lwip/arch.h"
-//#include "lwip/err.h"
+#include "lwip/arch.h"
+#include "lwip/err.h"
 
 
-#define BUFFER_CHUNK_SIZE 1024
+#define BUFFER_CHUNK_SIZE 1000
 
 static const char *TAG = "servefrom_sdcard";
 
@@ -49,7 +49,7 @@ void sdcard_init() {
 
 	esp_vfs_fat_sdmmc_mount_config_t mount_config =
 	{
-				.format_if_mount_failed = true,
+				.format_if_mount_failed = false,
 				.max_files = 5
 	};
 
@@ -160,18 +160,22 @@ void serve_file_from_sdcard(struct netconn *newconn, char *path) {
 
 		// Because of limited heap space, need to read file in chunks and send over wire
 		uint32_t b;
+		uint32_t total_filesize_sent = 0;
 		char buf[BUFFER_CHUNK_SIZE];
 		while (1) {
 			f_read(&fil, buf, BUFFER_CHUNK_SIZE, &b);
-			printf("Bytes read: %d\n", b);
-			ESP_LOGI(TAG, "Heap size: %d", xPortGetFreeHeapSize());
+
+			//ESP_LOGI(TAG, "Heap size: %d", xPortGetFreeHeapSize());
 			http_send_payload(newconn, buf, b);
+			total_filesize_sent = total_filesize_sent + b;
+			printf("Bytes read: %u...", total_filesize_sent);
 			//If the number of bytes read is less than the number of bytes we requested to read,
 			//it implies that the entire file has been read, so we are done
 			if (b < BUFFER_CHUNK_SIZE) {
 				break;
 			}
 		}
+		printf("\n");
 
 		http_send_footer(newconn);
 		f_close(&fil);

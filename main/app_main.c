@@ -27,7 +27,8 @@ void app_main()
     ESP_ERROR_CHECK( ret );
 
     wifi_ap();
-    xTaskCreate(&http_server, "http_server", 8192, NULL, 5, NULL);
+	//xTaskCreate(&http_server, "http_server", 8192, NULL, 5, NULL);
+	xTaskCreate(&http_server, "http_server", 20000, NULL, 5, NULL);
     xTaskCreate(&websockets_server, "websockets_server", 8192, NULL, 4, NULL);
 
 

@@ -9,7 +9,7 @@
 #include "lwip/err.h"
 #include "crypto/base64.h"
 #include "hwcrypto/sha.h"
-#include "cJSON.h"
+//#include "cJSON.h"
 #include "servefrom_sdcard.h"
 
 #define HTTP_PORT 80
