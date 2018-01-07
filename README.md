@@ -46,9 +46,9 @@ To test, I used [test.html](https://github.com/mohankumargupta/espidf-playground
 
 (Not served, just opened locally on PC)
 
-# TODO
-- change SD card pinouts back to default as the SD Card example
-- reduce heap footprint
+# BUGS
+- not able to recover heap space after sending websocket frame or closing websocket connection
+- mutiple websocket connections not currently supported.
 
 
 
