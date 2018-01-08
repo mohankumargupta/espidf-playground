@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include "esp_system.h"
 #include "cJSON.h"
 
 /*
@@ -46,19 +47,32 @@ char* process_incoming_websocket_frame_payload(char *data) {
 
 	// Generate some dummy data for X
 	int number_of_datapoints = datapoints->valueint;
-	int x_axis[number_of_datapoints];
+	uint16_t x_axis[number_of_datapoints];
 	for (int i = 1; i <= number_of_datapoints; i++) {
 		x_axis[i - 1] = i;
 	}
 
 	// Generate some dummy data for Y
-	int y_axis[number_of_datapoints];
+	uint16_t y_axis[number_of_datapoints];
 	for (int i = 0; i < number_of_datapoints; i++) {
 		y_axis[i] = 110 + i;
 	}
 
-	cJSON *x = cJSON_CreateIntArray(x_axis, number_of_datapoints);
-	cJSON *y = cJSON_CreateIntArray(y_axis, number_of_datapoints);
+	//cJSON *x = cJSON_CreateIntArray(x_axis, number_of_datapoints);
+	//cJSON *y = cJSON_CreateIntArray(y_axis, number_of_datapoints);
+	cJSON *x = cJSON_CreateArray();
+	for (int i = 0; i < number_of_datapoints; i++) {
+		cJSON *x_num = cJSON_CreateNumber((double) x_axis[i]);
+		cJSON_AddItemToArray(x, x_num);
+	}
+	cJSON *y = cJSON_CreateArray();
+	for (int i = 0; i < number_of_datapoints; i++) {
+		cJSON *y_num = cJSON_CreateNumber((double) y_axis[i]);
+		cJSON_AddItemToArray(y, y_num);
+	}
+
+
+
 
 	cJSON_AddItemToObject(root, "x", x);
 	cJSON_AddItemToObject(root, "y", y);
